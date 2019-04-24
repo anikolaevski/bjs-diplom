@@ -7,6 +7,8 @@ class Profile {
     this.password = data.password;
     this.wallet = {RUB: 0, USD: 0, EUR: 0, NETCOIN: 0};
     this.createStatus = 0;
+    this.loiginStatus = 0;
+    
     ApiConnector.createUser( 
       {
         username: this.username,
@@ -23,6 +25,10 @@ class Profile {
   }
   
   login() {
+    if (this.createStatus != 1) {
+      console.log (`User '${this.username}' has not beet created yet, unable to login`);
+      return;
+    }
     ApiConnector.performLogin(
       {
         username: this.username,
@@ -30,15 +36,30 @@ class Profile {
       },
       (err, data) => {
         console.log(`logging on ${this.username}... error ${err}, ${data}`);
+        if(!err) {
+          this.loiginStatus = 1;
+        }
        }
      );
    }
    
    addMoney( { currency, amount }, callback) {
-        return ApiConnector.addMoney({ currency, amount }, (err, data) => {
-            console.log(`Adding ${amount} of ${currency} to ${this.username}`);
-            callback(err, data);
-        });
+        if (this.loiginStatus != 1) {
+          this.login();
+        }
+        if (this.loiginStatus != 1) {
+          console.log (`User '${this.username}' has not beet created yet, unable to add money`);
+          return this;
+        } else {
+          const obj = ApiConnector.addMoney({ currency, amount }, (err, data) => {
+              console.log(`Adding ${amount} of ${currency} to ${this.username}`);
+              callback(err, data);
+          });
+          if(obj) {
+            this.wallet[currency] = obj.wallet[currency];
+          }
+          return obj;
+        }
     }
 
 }
@@ -64,30 +85,22 @@ const Petr = new Profile({
                   password: 'petrpass'
               });
 
-/*
-ApiConnector.createUser( 
-      {
-                  username: 'ivan3',
-                  name: { firstName: 'Ivan', lastName: 'Chernyshev' },
-                  password: 'ivanspass'
-      }, 
-      (err, data) => {
-        console.log(`creating user 'ivan3'... error ${err}, ${data}`);
-        return data;
-       }
-     );
-*/
 
-//setTimeout(Ivan.login,5000);
-
-/*
 Ivan.login();
-     
+
 Ivan.addMoney(
   {
     currency: 'USD',
     amount: 1000
   }, 
-  ( err, data ) => {console.log(err, data)}
+  ( err, data ) => {
+    //console.log(err, data)
+    if(!err) {
+      console.log(111, data.wallet);
+    }
+  }
 );
+
+/*
+     
 */
