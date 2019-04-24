@@ -55,9 +55,9 @@ class Profile {
               console.log(`Adding ${amount} of ${currency} to ${this.username}`);
               callback(err, data);
           });
-          if(obj) {
-            this.wallet[currency] = obj.wallet[currency];
-          }
+ //         if(obj) {
+ //           this.wallet[currency] = obj.wallet[currency];
+ //         }
           return obj;
         }
     }
@@ -94,10 +94,10 @@ Ivan.addMoney(
     amount: 1000
   }, 
   ( err, data ) => {
-    //console.log(err, data)
-    if(!err) {
-      console.log(111, data.wallet);
-    }
+    console.log(111, err, data);
+    //if(!err) {
+    console.log(112, data[wallet], arguments);
+    //}
   }
 );
 
