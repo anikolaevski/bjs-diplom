@@ -16,8 +16,9 @@ class Profile {
         password: this.password
       }, 
       (err, data) => {
-        console.log(`creating user ${this.username}... error ${err}, ${data}`);
+        console.log(`creating user ${this.username}...`);
         if(!err) {
+        console.log(`... success ${data}`);
           this.createStatus = 1;
         }
        }
@@ -35,9 +36,10 @@ class Profile {
         password: this.password
       },
       (err, data) => {
-        console.log(`logging on ${this.username}... error ${err}, ${data}`);
+        console.log(`logging on ${this.username}...`);
         if(!err) {
           this.loiginStatus = 1;
+          console.log(`... success ${data}`);
         }
        }
      );
@@ -53,31 +55,19 @@ class Profile {
         } else {
           const obj = ApiConnector.addMoney({ currency, amount }, (err, data) => {
               console.log(`Adding ${amount} of ${currency} to ${this.username}`);
-              callback(err, data);
+              callback(err, data, this);
           });
- //         if(obj) {
- //           this.wallet[currency] = obj.wallet[currency];
- //         }
           return obj;
         }
     }
 
 }
+
 const Ivan = new Profile({
                   username: 'ivan',
                   name: { firstName: 'Ivan', lastName: 'Chernyshev' },
                   password: 'ivanspass'
               });
-
-//function catchError ( err, data ) {
-//  console.log(err, data);
-//}
-
-//const err1 = () => catchError(1,'asd');
-
-//console.log('Created profile:',Ivan);
-//console.log(err1());
-
 
 const Petr = new Profile({
                   username: 'petr',
@@ -85,22 +75,20 @@ const Petr = new Profile({
                   password: 'petrpass'
               });
 
+if(Ivan.createStatus == 1) {
+  Ivan.login();
+}
 
-Ivan.login();
-
-Ivan.addMoney(
-  {
-    currency: 'USD',
-    amount: 1000
-  }, 
-  ( err, data ) => {
-    console.log(111, err, data);
-    //if(!err) {
-    console.log(112, data[wallet], arguments);
-    //}
-  }
-);
-
-/*
-     
-*/
+if(Ivan.loiginStatus == 1) {
+  Ivan.addMoney(
+    {
+      currency: 'USD',
+      amount: 1000
+    }, 
+    ( err, data, obj ) => {
+      if(!err) {
+        obj.wallet = data.wallet;
+      }
+    }
+  );
+}
