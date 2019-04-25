@@ -1,4 +1,21 @@
 "use strict";
+
+class Stock {
+  constructor() {
+    this.rates = {};
+  }
+  
+  getRates() {
+    let err, data;
+    ApiConnector.getStocks(
+      ( err, data ) => 
+      { 
+        this.rates = data[data.length - 1];
+      }
+    );
+  }
+}
+
 class Profile {
 
   constructor (data) {
@@ -61,7 +78,7 @@ class Profile {
       }
     }
     
-   convertMoney ({ fromCurrency, targetCurrency, targetAmount }, callback) {
+   convertMoney ({ fromCurrency, targetCurrency, sourceAmount }, callback) {
       if (this.loiginStatus != 1) {
         this.login();
       }
@@ -69,16 +86,49 @@ class Profile {
         console.log (`User '${this.username}' has not beet created yet, unable to add money`);
         return this;
       } else {
-        const obj = ApiConnector.convertMoney({ fromCurrency, targetCurrency, targetAmount }, 
+      
+        myStock.getRates();
+        let workRate;
+        //console.log(`Exchange rates:`);
+        for (var prop in myStock.rates) {
+          //console.log(prop, myStock.rates[prop]);
+          if(prop ==  fromCurrency + '_' + targetCurrency) {
+             workRate = myStock.rates[prop];
+             //console.log(`*** Current Rate = ${prop}: ${workRate} ***`);
+          }
+        }
+        const targetAmount =  sourceAmount * workRate;
+        const obj = ApiConnector.convertMoney({ fromCurrency, targetCurrency, targetAmount: targetAmount }, 
         (err, data) => 
         {
-          console.log(`Currency exchange ${fromCurrency} to ${targetCurrency} ${targetAmount} for ${this.username}`);
+          console.log(`Currency exchange ${fromCurrency} ${sourceAmount} to ${targetCurrency} ${targetAmount} for ${this.username}, exchange rate is ${workRate}`);
           callback(err, data, this);
         }); 
         return obj;
       }
    }
+   
+   transferMoney({ to, amount }, callback) {
+      if (this.loiginStatus != 1) {
+        this.login();
+      }
+      if (this.loiginStatus != 1) {
+        console.log (`User '${this.username}' has not beet created yet, unable to add money`);
+        return this;
+      } else {
+        const obj = ApiConnector.transferMoney({ to, amount }, 
+        (err, data) => 
+        {
+          console.log(`Transfer ${amount} tokens to ${to} from ${this.username}`);
+          callback(err, data, this);
+        }
+        );
+      }
+   }
 }
+
+const myStock = new Stock();
+myStock.getRates();
 
 const Ivan = new Profile({
                   username: 'ivan',
@@ -91,6 +141,7 @@ const Petr = new Profile({
                   name: { firstName: 'Petr', lastName: 'Petroff' },
                   password: 'petrpass'
               });
+
 
 function step01() {
   if(Ivan.createStatus == 1 && Ivan.loiginStatus == 0) {
@@ -124,7 +175,7 @@ function step02() {
       {
         fromCurrency: 'USD',
         targetCurrency: 'NETCOIN',
-        targetAmount: 20
+        sourceAmount: 500
       }, 
       ( err, data, obj ) => {
         if(!err) {
@@ -136,6 +187,30 @@ function step02() {
   };
 };
 
+function step03() {
+  if(Ivan.createStatus == 1 && Ivan.loiginStatus == 0) {
+    Ivan.login();
+    return;
+  };
+  if(Ivan.loiginStatus == 1) {
+  
+    Ivan.transferMoney(
+      {
+        to: Petr,
+        amount: 10
+      }, 
+      ( err, data ) => 
+      {
+        console.log(data);
+      }
+      
+      );
+  
+  };
+}
+
+
 let timerId = setInterval(step01, 5000);
 
 
+   
