@@ -46,21 +46,38 @@ class Profile {
    }
    
    addMoney( { currency, amount }, callback) {
-        if (this.loiginStatus != 1) {
-          this.login();
-        }
-        if (this.loiginStatus != 1) {
-          console.log (`User '${this.username}' has not beet created yet, unable to add money`);
-          return this;
-        } else {
-          const obj = ApiConnector.addMoney({ currency, amount }, (err, data) => {
-              console.log(`Adding ${amount} of ${currency} to ${this.username}`);
-              callback(err, data, this);
-          });
-          return obj;
-        }
+      if (this.loiginStatus != 1) {
+        this.login();
+      }
+      if (this.loiginStatus != 1) {
+        console.log (`User '${this.username}' has not beet created yet, unable to add money`);
+        return this;
+      } else {
+        const obj = ApiConnector.addMoney({ currency, amount }, (err, data) => {
+            console.log(`Adding ${amount} of ${currency} to ${this.username}`);
+            callback(err, data, this);
+        });
+        return obj;
+      }
     }
-
+    
+   convertMoney ({ fromCurrency, targetCurrency, targetAmount }, callback) {
+      if (this.loiginStatus != 1) {
+        this.login();
+      }
+      if (this.loiginStatus != 1) {
+        console.log (`User '${this.username}' has not beet created yet, unable to add money`);
+        return this;
+      } else {
+        const obj = ApiConnector.convertMoney({ fromCurrency, targetCurrency, targetAmount }, 
+        (err, data) => 
+        {
+          console.log(`Currency exchange ${fromCurrency} to ${targetCurrency} ${targetAmount} for ${this.username}`);
+          callback(err, data, this);
+        }); 
+        return obj;
+      }
+   }
 }
 
 const Ivan = new Profile({
@@ -75,7 +92,7 @@ const Petr = new Profile({
                   password: 'petrpass'
               });
 
-function main() {
+function step01() {
   if(Ivan.createStatus == 1 && Ivan.loiginStatus == 0) {
     Ivan.login();
     return;
@@ -93,9 +110,32 @@ function main() {
       }
     );
     clearTimeout(timerId);
+    timerId = setTimeout(step02, 5000);
   };
 };
 
-let timerId = setInterval(main, 5000);
+function step02() {
+  if(Ivan.createStatus == 1 && Ivan.loiginStatus == 0) {
+    Ivan.login();
+    return;
+  };
+  if(Ivan.loiginStatus == 1) {
+    Ivan.convertMoney(
+      {
+        fromCurrency: 'USD',
+        targetCurrency: 'NETCOIN',
+        targetAmount: 20
+      }, 
+      ( err, data, obj ) => {
+        if(!err) {
+          obj.wallet = data.wallet;
+        }
+      }
+    );
+    clearTimeout(timerId);
+  };
+};
+
+let timerId = setInterval(step01, 5000);
 
 
