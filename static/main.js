@@ -75,20 +75,27 @@ const Petr = new Profile({
                   password: 'petrpass'
               });
 
-if(Ivan.createStatus == 1) {
-  Ivan.login();
-}
-
-if(Ivan.loiginStatus == 1) {
-  Ivan.addMoney(
-    {
-      currency: 'USD',
-      amount: 1000
-    }, 
-    ( err, data, obj ) => {
-      if(!err) {
-        obj.wallet = data.wallet;
+function main() {
+  if(Ivan.createStatus == 1 && Ivan.loiginStatus == 0) {
+    Ivan.login();
+    return;
+  };
+  if(Ivan.loiginStatus == 1) {
+    Ivan.addMoney(
+      {
+        currency: 'USD',
+        amount: 1000
+      }, 
+      ( err, data, obj ) => {
+        if(!err) {
+          obj.wallet = data.wallet;
+        }
       }
-    }
-  );
-}
+    );
+    clearTimeout(timerId);
+  };
+};
+
+let timerId = setInterval(main, 5000);
+
+
