@@ -1,5 +1,3 @@
-"use strict";
-
 class Stock {
   constructor() {
     this.rates = {};
@@ -86,25 +84,36 @@ class Profile {
         console.log (`User '${this.username}' has not beet created yet, unable to add money`);
         return this;
       } else {
-      
-        myStock.getRates();
-        let workRate;
-        //console.log(`Exchange rates:`);
-        for (var prop in myStock.rates) {
-          //console.log(prop, myStock.rates[prop]);
-          if(prop ==  fromCurrency + '_' + targetCurrency) {
-             workRate = myStock.rates[prop];
-             //console.log(`*** Current Rate = ${prop}: ${workRate} ***`);
-          }
-        }
-        const targetAmount =  sourceAmount * workRate;
-        const obj = ApiConnector.convertMoney({ fromCurrency, targetCurrency, targetAmount: targetAmount }, 
-        (err, data) => 
-        {
-          console.log(`Currency exchange ${fromCurrency} ${sourceAmount} to ${targetCurrency} ${targetAmount} for ${this.username}, exchange rate is ${workRate}`);
-          callback(err, data, this);
-        }); 
-        return obj;
+
+          const asyncPart = async () => { 
+                myStock.getRates()
+           };
+          
+          asyncPart()
+          .then( (err, data) => 
+            {
+              let workRate;
+              for (var prop in myStock.rates) {
+                if(prop ==  fromCurrency + '_' + targetCurrency) {
+                   workRate = myStock.rates[prop];
+                }
+              }
+              const targetAmount =  sourceAmount * workRate;
+              const obj = ApiConnector.convertMoney(
+                { fromCurrency, targetCurrency, targetAmount: targetAmount }, 
+                (err, data) => 
+                {
+                  console.log(`Currency exchange ${fromCurrency} ${sourceAmount} 
+                  to ${targetCurrency} ${targetAmount} 
+                  for ${this.username}, exchange rate is ${workRate}`);
+                  callback(err, data, this);
+                }
+              ); 
+              return obj;
+          })
+          .catch(e => {
+               callback(e, null);
+         });
       }
    }
    
@@ -116,12 +125,13 @@ class Profile {
         console.log (`User '${this.username}' has not beet created yet, unable to add money`);
         return this;
       } else {
-        const obj = ApiConnector.transferMoney({ to, amount }, 
-        (err, data) => 
-        {
-          console.log(`Transfer ${amount} tokens to ${to} from ${this.username}`);
-          callback(err, data, this);
-        }
+        const obj = ApiConnector.transferMoney(
+          { to, amount }, 
+          (err, data) => 
+          {
+            console.log(`Transfer ${amount} tokens to ${to} from ${this.username}`);
+            callback(err, data, this);
+          }
         );
       }
    }
@@ -160,6 +170,17 @@ function step01() {
         }
       }
     );
+    Ivan.addMoney(
+      {
+        currency: 'EUR',
+        amount: 500000
+      }, 
+      ( err, data, obj ) => {
+        if(!err) {
+          obj.wallet = data.wallet;
+        }
+      }
+    );
     clearTimeout(timerId);
     timerId = setTimeout(step02, 5000);
   };
@@ -176,6 +197,18 @@ function step02() {
         fromCurrency: 'USD',
         targetCurrency: 'NETCOIN',
         sourceAmount: 500
+      }, 
+      ( err, data, obj ) => {
+        if(!err) {
+          obj.wallet = data.wallet;
+        }
+      }
+    );
+    Ivan.convertMoney(
+      {
+        fromCurrency: 'EUR',
+        targetCurrency: 'NETCOIN',
+        sourceAmount: 500000
       }, 
       ( err, data, obj ) => {
         if(!err) {
