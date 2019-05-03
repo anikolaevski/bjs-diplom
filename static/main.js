@@ -61,6 +61,7 @@ class Profile {
     this.name = data.name;
     this.password = data.password;
     this.wallet = {RUB: 0, USD: 0, EUR: 0, NETCOIN: 0};
+    this.locks = {RUB: 0, USD: 0, EUR: 0, NETCOIN: 0};
     this.createStatus = 0;
     this.loiginStatus = 0;
 
@@ -98,6 +99,18 @@ class Profile {
      );
    }
 
+   isLockedCurrency(currency) {
+     return this.locks[currency];
+   }
+
+   lockCurrency(currency) {
+     this.locks[currency] = 1;
+   }
+
+   unlockCurrency(currency) {
+     this.locks[currency] = 0;
+   }
+
    addMoney( { currency, amount } ) {
       if (this.loiginStatus != 1) {
         this.login();
@@ -116,13 +129,32 @@ class Profile {
     }
 
     convertMoney ({ fromCurrency, targetCurrency, sourceAmount }) {
-      let exchTimerId;
+      let exchTimerId, exchTimeout = 123;
+      const from_Currency = {fromCurrency, targetCurrency, sourceAmount }['fromCurrency'];
+      const target_Currency = {fromCurrency, targetCurrency, sourceAmount }['targetCurrency'];
+      switch (from_Currency)  {
+        case 'USD':
+          exchTimeout = 100;
+          break;
+        case 'EUR':
+            exchTimeout = 537;
+            break;
+        case 'RUB':
+          exchTimeout = 317;
+          break;
+        default:
+          exchTimeout = 137;
+          alert ('Wrong currency!');
+      }
       const checkExchState = () => {
         if (this.doConvertMoney ({ fromCurrency, targetCurrency, sourceAmount }) == 1) {
           clearTimeout(exchTimerId);
+          this.unlockCurrency(from_Currency);
+          this.unlockCurrency(target_Currency);
         };
       };
-      exchTimerId = setInterval(checkExchState, 100);
+      console.log(`Wait timeout for ${from_Currency} is ${exchTimeout}`);
+      exchTimerId = setInterval(checkExchState, exchTimeout);
     }
 
     doConvertMoney ({ fromCurrency, targetCurrency, sourceAmount }) /*, callback)*/ {
@@ -147,11 +179,22 @@ class Profile {
         }
         // check exchange rate
         if(workRate < bestWorkRate * 0.75) {
-          console.log(`Waiting for good exchange rate, current rate is ${workRate}, best rate is ${bestWorkRate}`);
+          console.log(`Waiting for good exchange rate ${fromCurrency} to ${targetCurrency}, current rate is ${workRate}, best rate is ${bestWorkRate}`);
           return 0;
         }
+        if(this.isLockedCurrency(fromCurrency)) {
+          console.log(`Waiting for unlock if currency ${fromCurrency} in the wallet`);
+          return 0;
+        }
+        if(this.isLockedCurrency(targetCurrency)) {
+          console.log(`Waiting for unlock if currency ${targetCurrency} in the wallet`);
+          return 0;
+        }
+
         // perform exchange
         const targetAmount =  sourceAmount * workRate;
+        this.lockCurrency(fromCurrency);
+        this.lockCurrency(targetCurrency);
         const obj = ApiConnector.convertMoney(
           { fromCurrency, targetCurrency, targetAmount: targetAmount },
           (err, data) =>
@@ -225,8 +268,14 @@ function step01() {
         amount: 500000
       }
     );
+    Ivan.addMoney(
+      {
+        currency: 'RUB',
+        amount: 1000000
+      }
+    );
     clearTimeout(timerId);
-    // timerId = setTimeout(step02, 5000);
+    timerId = setTimeout(step02, 5000);
   };
 };
 
@@ -235,12 +284,12 @@ function step02() {
     Ivan.login();
     return;
   };
-  if(Ivan.loiginStatus == 1) {
+  // if(Ivan.loiginStatus == 1) {
     Ivan.convertMoney(
       {
         fromCurrency: 'USD',
         targetCurrency: 'NETCOIN',
-        sourceAmount: 500
+        sourceAmount: 1000
       }
     );
     Ivan.convertMoney(
@@ -250,8 +299,14 @@ function step02() {
         sourceAmount: 500000
       }
     );
+    Ivan.convertMoney(
+      {
+        fromCurrency: 'RUB',
+        targetCurrency: 'NETCOIN',
+        sourceAmount: 1000000
+      }
+    );
     clearTimeout(timerId);
-  };
 };
 
 function step03() {
@@ -278,12 +333,12 @@ function step03() {
 
 
 let timerId = setInterval(step01, 1000);
-console.log(Ivan.wallet);
-console.log(Ivan.convertMoney(
-  {
-    fromCurrency: 'EUR',
-    targetCurrency: 'NETCOIN',
-    sourceAmount: 500000
-  }
-));
-console.log(Ivan.wallet);
+// console.log(Ivan.wallet);
+// console.log(Ivan.convertMoney(
+//   {
+//     fromCurrency: 'EUR',
+//     targetCurrency: 'NETCOIN',
+//     sourceAmount: 500000
+//   }
+// ));
+// console.log(Ivan.wallet);
