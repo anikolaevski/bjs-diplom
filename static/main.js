@@ -4,6 +4,7 @@ class Stock {
     this.rates = {};         // last extracted rates
     this.prevrates = {};     // previous extracted rates
     this.bestrates = {};     // best rates, obtained after number of runs
+    this.surveyVolume = 0;
   }
 
   getRates() {
@@ -16,12 +17,31 @@ class Stock {
         for (var prop in this.rates) {
           if(typeof(this.bestrates[prop]) == 'undefined') {
             this.bestrates[prop] = this.rates[prop];
-            this.prevrates[prop] = this.rates[prop];
           } else {
             this.bestrates[prop] = Math.max( this.rates[prop], this.bestrates[prop] );
             this.bestrates[prop] += '';
           }
         }
+        this.surveyVolume++;
+      }
+    );
+  }
+
+  getBestRates() {
+    let err, data, state = 1;
+    ApiConnector.getStocks(
+      ( err, data ) =>
+      {
+        for (var prop in this.rates) {
+          if(typeof(this.bestrates[prop]) == 'undefined') {
+            this.bestrates[prop] = this.rates[prop];
+          }
+        };
+        data.forEach( (rate) => {
+          for (var prop in this.rates) {
+              this.bestrates[prop] = Math.max( rate[prop], this.bestrates[prop] );
+          }
+        });
       }
     );
   }
@@ -47,7 +67,6 @@ class Profile {
     this.locks = {RUB: 0, USD: 0, EUR: 0, NETCOIN: 0};
     this.createStatus = 0;
     this.loiginStatus = 0;
-    // this.transferStatus = 0;
   }
 
   createUser() {
@@ -119,7 +138,7 @@ class Profile {
       }
     }
 
-    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }) /*, callback)*/ {
+    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }) {
       if (this.loiginStatus != 1) {
         this.login();
       }
@@ -162,7 +181,6 @@ class Profile {
           (err, data) =>
           {
             console.log(`Currency exchange ${fromCurrency} ${sourceAmount} to ${targetCurrency} ${targetAmount} for ${this.username}, exchange rate is ${workRate}`);
-            // callback(err, data, this);
             if(!err) {
               this.wallet[targetCurrency] = data.wallet[targetCurrency];
               this.wallet[fromCurrency] = data.wallet[fromCurrency];
@@ -189,9 +207,8 @@ class Profile {
         console.log(`Transfer ${amount} tokens to ${toName} from ${this.username}`);
         ApiConnector.transferMoney(
           { to: toName, amount: amount },
-          (err, data, to) => {
+          (err, data) => {
             if (!err) {
-              // console.log(112, this.wallet, data.wallet, Date.now());
               this.wallet['NETCOIN'] = data.wallet['NETCOIN'];
             }
           }
@@ -214,8 +231,16 @@ function main() {
              password: 'petrpass'
          });
 
-// Gathering best exchange rates
-  const stockQuery = () => { myStock.getRates() };
+// Gathering best exchange rates, at 5th measurement start actions...
+  const stockQuery = () => {
+    myStock.getRates();
+    if(myStock.surveyVolume <= 2 ) {
+      myStock.getBestRates();
+    }
+    if(myStock.surveyVolume == 3 ) {
+      myTimeout = setInterval(createuser, 500);
+    }
+  };
   let stockTimeout;
 
 // Create 1st user
@@ -223,11 +248,9 @@ function main() {
     if(Ivan.createStatus == 0) {
       Ivan.createUser();
     }
-    // console.log(111, Ivan.createStatus, myTimeout);
     if(Ivan.createStatus == 1) {
       clearTimeout(myTimeout);
       myTimeout = setInterval(loginuser, 500);
-      // console.log(222, Ivan.createStatus, myTimeout);
     };
     return Ivan.createStatus;
   };
@@ -311,7 +334,7 @@ function main() {
 
   console.log('Obtaining best Exchange rates...');
   stockTimeout = setInterval(stockQuery,300);
-  myTimeout = setInterval(createuser, 2000);
+  // myTimeout = setInterval(createuser, 2000);
 }
 
 const myStock = new Stock();
