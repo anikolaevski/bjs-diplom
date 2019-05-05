@@ -5,6 +5,7 @@ class Stock {
     this.prevrates = {};     // previous extracted rates
     this.bestrates = {};     // best rates, obtained after number of runs
     this.surveyVolume = 0;
+    this.timeout = 0;
   }
 
   getRates() {
@@ -191,7 +192,7 @@ class Profile {
       }
    }
 
-   transferMoney({ to, amount } ) {
+   transferMoney({ to, amount }, callback ) {
      // let result = 0;
       if (this.loiginStatus != 1) {
         this.login();
@@ -204,16 +205,15 @@ class Profile {
         return this;
       } else {
         const toName = to.username;
-        console.log(`Transfer ${amount} tokens to ${toName} from ${this.username}`);
+        console.log(`Transfer ${amount} tokens from ${this.username} to ${toName}`);
         ApiConnector.transferMoney(
           { to: toName, amount: amount },
           (err, data) => {
             if (!err) {
-              this.wallet['NETCOIN'] = data.wallet['NETCOIN'];
+                callback(data);
             }
           }
         );
-        to.wallet['NETCOIN'] += amount;
       }
    }
 }
@@ -323,17 +323,22 @@ function main() {
   // transfer 1st user's tokens to 2nd user
   const sendTokens = () => {
     const transferAmount = Ivan.wallet['NETCOIN'];
-    Ivan.transferMoney( { to: Petr, amount: transferAmount } );
+    const transCallback = (data) => {
+      Ivan.wallet['NETCOIN'] = data.wallet['NETCOIN'];
+      Petr.wallet['NETCOIN'] += transferAmount;
+    }
+    Ivan.transferMoney( { to: Petr, amount: transferAmount }, transCallback );
     setTimeout(displayStatus, 500);
   };
 
   const displayStatus = () => {
     console.log(Ivan.username, Ivan.wallet);
     console.log(Petr.username, Petr.wallet);
+    clearTimeout(myStock.timeout);
   }
 
   console.log('Obtaining best Exchange rates...');
-  stockTimeout = setInterval(stockQuery,300);
+  myStock.timeout = setInterval(stockQuery,300);
   // myTimeout = setInterval(createuser, 2000);
 }
 
