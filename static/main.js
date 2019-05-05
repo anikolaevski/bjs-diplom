@@ -142,7 +142,7 @@ class Profile {
       }
     }
 
-    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }, callback) {
+    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }, callback, myStock ) {
       if (this.loiginStatus != 1) {
         this.login();
       }
@@ -224,6 +224,8 @@ class Profile {
 
 function main() {
   let myTimeout;
+  const myStock = new Stock();
+
   const Ivan = new Profile({
                     username: 'ivan',
                     name: { firstName: 'Ivan', lastName: 'Chernyshev' },
@@ -238,10 +240,10 @@ function main() {
 // Gathering best exchange rates, at 5th measurement start actions...
   const stockQuery = () => {
     myStock.getRates();
-    if(myStock.surveyVolume <= 2 ) {
+    if(myStock.surveyVolume == 1 ) {
       myStock.getBestRates();
     }
-    if(myStock.surveyVolume == 3 ) {
+    if(myStock.surveyVolume == 2 ) {
       createuser();
     }
   };
@@ -259,7 +261,6 @@ function main() {
     if(Ivan.loiginStatus == 0) {
       Ivan.login(addMoney);
     }
-    // return Ivan.loiginStatus;
   };
 
   // Adding money
@@ -293,7 +294,7 @@ function main() {
     const nextStep = () => {clearTimeout(myTimeout); creaSecondUser() }; //stop iterations, goto next step
 
     if(Ivan.wallet[targetCurrency] == 0) {
-      Ivan.convertMoney( transObject, nextStep );
+      Ivan.convertMoney( transObject, nextStep, myStock );
     }
   }
 
@@ -301,7 +302,7 @@ function main() {
   const creaSecondUser = () => {
     if(Petr.createStatus == 0) {
       Petr.createUser(sendTokens);
-    } 
+    }
   };
 
   // transfer 1st user's tokens to 2nd user
@@ -325,5 +326,4 @@ function main() {
   myStock.timeout = setInterval(stockQuery,300);
 }
 
-const myStock = new Stock();
 main();
