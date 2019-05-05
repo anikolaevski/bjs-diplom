@@ -70,7 +70,7 @@ class Profile {
     this.loiginStatus = 0;
   }
 
-  createUser() {
+  createUser( callback ) {
     ApiConnector.createUser(
       {
         username: this.username,
@@ -81,12 +81,13 @@ class Profile {
         if(!err) {
           console.log(`User ${this.username} created`);
           this.createStatus = 1;
+          callback();
         }
        }
      );
   }
 
-  login() {
+  login(callback) {
     if (this.createStatus != 1) {
       console.log (`User '${this.username}' has not beet created yet, unable to login`);
       return;
@@ -102,6 +103,7 @@ class Profile {
           this.loiginStatus = 1;
           console.log(`User ${this.username} logged on`);
           clearTimeout(timerId);
+          callback();
         } else {
           console.log(`User ${this.username} waiting for login`);
         }
@@ -122,7 +124,7 @@ class Profile {
      this.locks[currency] = 0;
    }
 
-   addMoney( { currency, amount } ) {
+   addMoney( { currency, amount }, callback ) {
       if (this.loiginStatus != 1) {
         this.login();
       }
@@ -134,12 +136,13 @@ class Profile {
             console.log(`Adding ${amount} of ${currency} to ${this.username}`);
             if(!err) {
               this.wallet[currency] = data.wallet[currency];
+              callback();
             }
         });
       }
     }
 
-    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }) {
+    convertMoney ({ fromCurrency, targetCurrency, sourceAmount }, callback) {
       if (this.loiginStatus != 1) {
         this.login();
       }
@@ -185,6 +188,7 @@ class Profile {
             if(!err) {
               this.wallet[targetCurrency] = data.wallet[targetCurrency];
               this.wallet[fromCurrency] = data.wallet[fromCurrency];
+              callback();
             }
           }
         );
@@ -238,7 +242,7 @@ function main() {
       myStock.getBestRates();
     }
     if(myStock.surveyVolume == 3 ) {
-      myTimeout = setInterval(createuser, 500);
+      createuser();
     }
   };
   let stockTimeout;
@@ -246,42 +250,32 @@ function main() {
 // Create 1st user
   const createuser = () => {
     if(Ivan.createStatus == 0) {
-      Ivan.createUser();
+      Ivan.createUser(loginuser);
     }
-    if(Ivan.createStatus == 1) {
-      clearTimeout(myTimeout);
-      myTimeout = setInterval(loginuser, 500);
-    };
-    return Ivan.createStatus;
   };
 
   // login user
   const loginuser = () => {
     if(Ivan.loiginStatus == 0) {
-      Ivan.login();
+      Ivan.login(addMoney);
     }
-    if(Ivan.loiginStatus == 1) {
-      clearTimeout(myTimeout);
-      myTimeout = setInterval(addMoney, 500);
-    };
-    return Ivan.loiginStatus;
+    // return Ivan.loiginStatus;
   };
 
   // Adding money
   const addMoney = () => {
     const testCurrency = 'EUR';
     const testAmount = 500000;
+    const nextStep = () => { myTimeout = setInterval(transMoney, 500) }; //may be needed to repeat transfer
+
     if(Ivan.wallet[testCurrency] == 0) {
       Ivan.addMoney(
         {
           currency: testCurrency,
           amount: testAmount
-        }
+        },
+        nextStep
       );
-    }
-    if(Ivan.wallet[testCurrency] == testAmount) {
-      clearTimeout(myTimeout);
-      myTimeout = setInterval(transMoney, 500);
     }
   }
 
@@ -293,31 +287,21 @@ function main() {
       targetCurrency: 'NETCOIN',
       sourceAmount: 500000
     };
-    let status = 0;
+    // let status = 0;
     const targetCurrency = transObject['targetCurrency'];
     const sourceAmount = transObject['sourceAmount'];
+    const nextStep = () => {clearTimeout(myTimeout); creaSecondUser() }; //stop iterations, goto next step
 
     if(Ivan.wallet[targetCurrency] == 0) {
-      status = Ivan.convertMoney( transObject );
-    }
-    if( status == 1) {
-      clearTimeout(myTimeout);
-      myTimeout = setInterval(creaSecondUser, 500);
+      Ivan.convertMoney( transObject, nextStep );
     }
   }
 
   // create 2nd user
   const creaSecondUser = () => {
     if(Petr.createStatus == 0) {
-      Petr.createUser();
-    }
-    // console.log(111, Ivan.createStatus, myTimeout);
-    if(Petr.createStatus == 1) {
-      clearTimeout(myTimeout);
-      setTimeout(sendTokens, 500);
-      // console.log(222, Ivan.createStatus, myTimeout);
-    };
-    return Petr.createStatus;
+      Petr.createUser(sendTokens);
+    } 
   };
 
   // transfer 1st user's tokens to 2nd user
@@ -326,9 +310,9 @@ function main() {
     const transCallback = (data) => {
       Ivan.wallet['NETCOIN'] = data.wallet['NETCOIN'];
       Petr.wallet['NETCOIN'] += transferAmount;
+      displayStatus();
     }
     Ivan.transferMoney( { to: Petr, amount: transferAmount }, transCallback );
-    setTimeout(displayStatus, 500);
   };
 
   const displayStatus = () => {
@@ -339,7 +323,6 @@ function main() {
 
   console.log('Obtaining best Exchange rates...');
   myStock.timeout = setInterval(stockQuery,300);
-  // myTimeout = setInterval(createuser, 2000);
 }
 
 const myStock = new Stock();
